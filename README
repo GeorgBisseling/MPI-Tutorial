@@ -1,0 +1,8 @@
+Yet Another MPI Tutorial
+
+This does not explain the setup of MPI but how to actually convert a 
+simple serial program into a parallelized one.
+
+Another parallelization job can be seen in my repository nbody_mpi.
+
+All code was also tested on the Raspberry Pi with OpenMPI.
