@@ -1,0 +1,208 @@
+<chapter id="starting.serial">
+<title>Starting with a Serial Program</title>
+
+    <para>We start with the serial program
+<computeroutput>apple_serial.c </computeroutput> shown in <xref
+linkend="apple.serial.c"/>. The invariant part of all the examples is
+in <computeroutput>invar.h</computeroutput> and
+<computeroutput>invar.c</computeroutput> (refer to <xref
+linkend="invar.h"/> and <xref linkend="invar.c"/>). So apple_serial.c
+is just the driver program. </para>
+
+<para>One really interesting part in invar.c is the the routine
+<computeroutput>writeOut</computeroutput>. This routine can write the result of the
+calculation out to disk so that we can check the result as a picture. 
+I use the ImageMagick tools for that.  Check out <ulink 
+url="http://www.imagemagick.org/"/>, but your favorite Linux distribution 
+might already have installed that on your harddisk anyway.</para>
+
+<para>When I run that on a 2.4 GHz Core 2 machine then I get: </para>
+
+<screen>
+> time ./apple_serial
+RE_START =                                       -2
+RE_STOP  =                                        2
+IM_START =                                        0
+IM_STOP  =                                        2
+XPIX     =                                     2048
+YPIX     =                                     1024
+MAXITER  =                                     4096
+    1023
+real    0m4.937s
+user    0m4.868s
+sys     0m0.028s
+</screen>
+
+<para>We have a point to start now: a single C2-2.4GHz-CPU can do it in less
+than 5 seconds - for this parameters that is.
+</para>
+
+<para>Please notice that we only calculate the upper half of the Mandelbrot
+set because it is symmetric around the real axis. You do not get a speed up
+of two for free so often.</para>
+
+<para>Now we set the environment variable WRITEOUT to save the results in
+an image and we see
+
+<screen>
+> WRITEOUT=1 time ./apple_serial
+...  
+Writing result to file "apple_serial_1p_size2048x1024.gray".
+</screen>
+
+at the end of the output. Now start ImageMagick with <userinput>display
+-depth 16 -size 2048x1024 apple_serial_1p_size2048x1024.gray</userinput>
+</para>
+
+<para>What do we see? Nothing, that's correct. We stored into a 16 bit gray
+scale format, but used less than the first few bits of it, which looks pretty
+black. Choose "Enhance" and then "Equalize". In the introduction we have 
+this picture (rotated to fit the page and negated to save the ink:
+<xref linkend="FIG.APPLE"/>.</para>
+
+<para>Okay. We have now a serial program that seems to produce a reasonable
+result and we know how much time it consumes.</para>
+
+<para>Now we take the next step. We introduce some MPI calls into the
+program but we let it still run with one process. The result is
+<computeroutput>apple_pseudo_mpi.1.c</computeroutput> (<xref
+linkend="apple.pseudo.mpi.1.c"/>). 
+We start it like this:</para>
+
+<screen>
+>time ./apple_pseudo_mpi.1
+...
+real    0m4.956s
+user    0m4.848s
+sys     0m0.028s
+</screen>
+
+    <para>Wow! No overhead for introducing MPI! The truth is that we left out
+the start script that is (most often) necessary to start a MPI program on a
+parallel machine like a cluster. Depending on the MPI (and machine) that you
+use it might be impossible to start the program standalone. So assuming that
+MPI is already properly setup we use the command mpiexec to start the same
+program with one process:</para>
+
+<screen>
+> time mpiexec -np 1 ./apple_pseudo_mpi.1
+...
+real    0m5.155s
+user    0m0.144s
+sys     0m0.048s
+</screen>
+
+<para>Still next to no overhead. That may differ for you setup and it 
+will for sure differ for higher processor counts or on a cluster.
+</para>
+
+<para>Just for the fun of it try <userinput>time mpiexec -np 2
+./apple_pseudo_mpi.1</userinput>. This should take double the time on a 
+single CPU machine and the same time on a machine with two or more CPUs.
+What happened? We had a MPI job consisting of two processes
+without any useful communication.  At least no communication that was 
+programmed by us. Both processes exercised the whole calculation.</para>
+
+<para>The next step is to consider how the calculation could be distributed
+among the processes. I suggest a very simple scheme where the calculation
+is distributed statically row by row. By saying
+<emphasis>statically</emphasis> I mean that given the amount of rows to
+calculate and the number of processes the assignment is totally
+determined. We will not have any protocol used to assign the work.</para>
+
+<para>The scheme will look like this:</para>
+
+<table frame="all"><title>Static Scheduling</title>
+  <tgroup cols="4" colsep="1" rowsep="1">
+	<colspec colname='row' /> <colspec colname='2p' /> <colspec
+	    colname='3p' /> <colspec colname='3p.ir' /> <thead><row> <entry
+	    namest="row" nameend="row" align="right">Row Number</entry>
+	    <entry>2 processes, working root</entry> <entry>3 processes,
+	    working root</entry> <entry>3 processes, idle root</entry>
+	  </row>
+	</thead>
+	<tbody>
+	  <row><entry>0</entry><entry>rank 0</entry><entry>rank
+	  0</entry><entry>rank 1</entry>
+	  </row>
+	  <row><entry>1</entry><entry>rank 1</entry><entry>rank
+	  1</entry><entry>rank 2</entry>
+	  </row>
+	  <row><entry>2</entry><entry>rank 0</entry><entry>rank
+	  2</entry><entry>rank 1</entry>
+	  </row>
+	  <row><entry>3</entry><entry>rank 1</entry><entry>rank
+	  0</entry><entry>rank 2</entry>
+	  </row>
+	  <row><entry>4</entry><entry>rank 0</entry><entry>rank
+	  1</entry><entry>rank 1</entry>
+	  </row>
+	  <row><entry>5</entry><entry>rank 1</entry><entry>rank
+	  2</entry><entry>rank 2</entry>
+	  </row>
+	</tbody>
+  </tgroup>
+</table>
+
+<para>The preliminary result of this effort is
+<computeroutput>apple_pseudo_mpi.2</computeroutput> (<xref
+linkend="apple.pseudo.mpi.2.c"/>).  Each process uses the macro
+<computeroutput>MYROW</computeroutput> to determine if it should
+calculate the given row. This macro itself and some other code is
+dependant on the definition of another macro
+<computeroutput>IDLEROOT</computeroutput>. If this macro is defined
+then the process with rank 0, often called root, will not participate
+in the calculation. This will help us later on. Notice that the
+makefile produces two versions of all programs that behave differently
+depending on the definition of
+<computeroutput>IDLEROOT</computeroutput>. </para>
+
+<para>When I run it with two and four processes on a quad core machine I get:</para>
+
+<screen>
+> time mpiexec -np 2 ./apple_pseudo_mpi.2 
+...
+real    0m2.832s
+user    0m0.112s
+sys     0m0.012s
+</screen>
+
+<screen>
+> time mpiexec -np 4 ./apple_pseudo_mpi.2 
+...
+real    0m1.647s
+user    0m0.100s
+sys     0m0.024s
+</screen>
+
+<para>You see that this scales very well. Both processes consume about half 
+of the time that was spend in the serial version and we did not introduce
+substantial additional overhead.</para>
+
+<para>Notice that the command line arguments are parsed in both
+processes. We will get rid of that in the next version. But try to
+understand what happens.</para>
+
+<para>Although this program does really exercise the computation that we
+want to have done it is really of no use: Each rank will calculate a part
+of the result, but the result is not gathered in one place. You can check
+that by letting it write a file as we did with
+<computeroutput>apple_serial.c</computeroutput>.  It will contain nothing if
+<computeroutput>IDLEROOT</computeroutput> was set and only the lines
+computed by rank 0 otherwise.</para>
+
+<para>The next step is, as you might expected,
+<computeroutput>apple_pseudo_mpi.3</computeroutput> (refer to <xref
+linkend="apple.pseudo.mpi.3.c"/>). But it is only a small step. The
+command line is parsed only at rank 0 and the results are broadcasted
+to the other ranks. If the parsing fails for some reason, then all
+ranks are told to exit in an orderly fashion. But still the result of
+the calculation is not gathered. </para>
+
+<para>You might have noticed that only the changes between the programs
+are decorated with comments.</para>
+
+<para> Be prepared for the next section where we will have a working
+parallel program.</para>
+
+</chapter>

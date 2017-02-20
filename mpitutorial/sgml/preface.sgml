@@ -1,0 +1,92 @@
+<preface>
+<title>Introduction</title>
+
+<para>This is another MPI tutorial, but one that presumes that you are
+already quite familiar with MPI in the sense that you managed to get some
+test programs to work on your computer(s). Installation problems etc. are
+not covered. Furthermore we will assume that you already wrote some MPI
+programs yourself and were surprised, confused or disappointed by varying
+amounts.</para>
+
+<para>To get more information about the MPI standards please have a look at
+<ulink url="http://www.mpi-forum.org/" />.</para>
+
+<para>Updated versions of this tutorial might be available at
+<ulink url="http://www.bisseling.de/georg/" /> and may be anounced in
+the news group <ulink url="news:comp.parallel.mpi" />.</para>
+
+<para>It is really important to understand that on one hand there is a MPI
+standard that tells how a MPI implementation should behave and how a
+correct MPI program looks like and on the other hand there are several MPI
+implementations. It's paperware vs. software. Fortunately not only the
+standards are open source, there are even open source MPI
+implementations.</para>
+
+<para><emphasis>The</emphasis> two of them are 
+MPICH2 <ulink url="http://www-unix.mcs.anl.gov/mpi/mpich/" /> and 
+OpenMPI <ulink url="http://www.open-mpi.org/" />.</para>
+
+<para>You may find software packets that are tailored to be built
+with predecessors of these two implementations, namely
+MPICH <ulink url="http://www-unix.mcs.anl.gov/mpi/mpich1/" /> and
+LAM MPI <ulink url="http://www.lam-mpi.org/" />.</para> 
+
+<para>Probably at least some of them were included in your favorite
+Linux distribution.</para>
+
+<para>For this tutorial I used the software tool chain provided
+by Intel: compiler, MPI library and the Intel trace analyzer for 
+performance analysis. Even if you prefer to use the gcc compiler
+and MPICH2 or mpich then you can still use the trace analyzer.
+</para>
+
+<para>Most if not all of the timings were done on a quad core SMP box
+(Intel Q6600) running OpenSuSE 10.2.</para>
+
+<para>I first started to get involved with MPI in 2000 when I got a new job
+in a project that aimed at implementing the whole MPI-2 standard. Although
+I did learn quite a bit about one could implement MPI and how one should
+better not, I have to admit that I lack the application programmers
+attitude to MPI.</para>
+
+<para>When it comes to tremendous amounts of Fortran code that do some
+weather forcasts, then I will never get that in the right perspective, I'm
+afraid. But I saw some questions in the news group comp.parallel.mpi
+that made me think that several problems could be understood and
+demonstrated using very small examples. </para>
+
+<para>I decided to use the calculation of the Mandelbrot set, or
+Apfelm&auml;nnchen as we say in Germany, as an example.  There are literaly
+thousands of pages dealing with the Mandelbrot set, so it isn't necessary
+to repeat an explanation of that here.</para>
+
+<para>The nice properties of this problem are that the result of the
+Mandelbrot calculation can be represented in a bitmap picture which makes
+it easy and pleasing to check the correctness of the result and that the
+calculation of each single pixel is entirely independent of all other
+pixels, so that the calculation can be partitioned in multiple ways.</para>
+
+<para>The tutorial will start with a serial program and convert that step
+by step into a parallel program thereby demonstrating several decisions
+that you have to make along the way, what problems can arise and how to
+solve them.  Most of these problems are not constructed but I ran into them
+right away. Which is funny since the parallelization of the calculation of
+the Mandelbrot set should be trivial. </para>
+
+<para>Several ways how to parallelize the program will be shown along 
+with some pictures generated with the help of the Intel Trace Analyzer and
+Collector to examine the performance characteristics of a particular
+program.</para>
+
+<para>In the end we will even use OpenMP to parallelize the program.
+Just to show that there is more to parallel programing than MPI.
+</para>
+
+<figure id="FIG.APPLE">
+<title>To whet your appetite</title>
+    <mediaobject> <imageobject>
+    <imagedata align="center" fileref="../graphics/apple.png" 
+               format="PNG" scale="25"/>
+</imageobject></mediaobject></figure>
+
+</preface>

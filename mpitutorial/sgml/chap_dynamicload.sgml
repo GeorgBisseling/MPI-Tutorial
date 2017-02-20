@@ -1,0 +1,44 @@
+<chapter>
+<title>Dynamic load balancing</title>
+
+<para>Why do we need dynamic load balancing? We have several potential
+causes that could result in varying run time on our processes.
+The most apparent reason is that the computers we have may differ
+in their processing power. Another reason is that
+different areas of the Mandelbrot set can require very different
+amounts of computation. In this particular case the scheme of interleaving
+the rows onto processors works quite well, but what if such a simple scheme
+is not known beforehand? And there could of course be varying
+load on the machines caused by those other users that unfortunately
+share the computers with us or by some demon processes that we forgot
+to switch off.</para>
+
+<para>Generally speaking there is often no way to find an adequate scheduling
+of the work to the available processors at startup time. So we should come
+up with a scheme that splits the work into packets and assigns them
+to the next free process. This way faster CPUs will be able to do more
+work than slow ones. There is a tradoff here: small packets cost
+bandwidth, but they allow for a fine grained adaption of the work load
+to the processors.</para>
+
+<para>The program <computeroutput>apple_mpi_dynamic.1.c</computeroutput>
+(<xref linkend="apple.mpi.poll.1.c"/>) tries to do that. Note that it
+is only available in the <computeroutput>IDLEROOT</computeroutput> flavor.
+But since the root process will not have that much to do we dare to start
+5 processes on our 4 core box:
+</para>
+
+<screen>
+> time mpiexec -np 5 ./apple_mpi_dynamic.1.ir
+...
+real    0m1.830s
+user    0m0.100s
+sys     0m0.024s
+</screen>
+
+<para>Works like a charm, doesn't it? The overhead compared to the
+simple non-blocking programs is quite high but keep in mind that
+we get a program that will adapt to load changes on the processors
+and imbalances in the task.</para>
+
+</chapter>

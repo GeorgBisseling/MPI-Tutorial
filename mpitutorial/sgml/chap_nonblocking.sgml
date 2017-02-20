@@ -1,0 +1,37 @@
+<chapter><title>Entirely nonblocking</title>
+
+<para>We will now not only use MPI_Irecv at rank 0 to collect the data but we
+will use MPI_Isend during the calculation. Our program does fit this strategy
+very well because it uses another piece of memory for each result so that we do
+not have to allocate extra buffers for the use of MPI_Isend.  The result of
+this effort is <computeroutput>apple_mpi_nblock.1.c</computeroutput> (<xref
+linkend="apple.mpi.nblock.1.c"/>).  Let's see:</para>
+
+
+<screen>
+> time mpirun -np 2 ./apple_mpi_nblock.1
+...
+real    0m2.843s
+user    0m0.100s
+sys     0m0.020s
+> time mpirun -np 4 ./apple_mpi_nblock.1
+...
+real    0m1.663s
+user    0m0.104s
+sys     0m0.008s
+</screen>
+
+<para>That looks fine. But this program behaves really bad with an MPI
+implementation from the mpich-1.2.x branch. If this nonblocking program
+will not run acceptable on your MPI then try
+<computeroutput>apple_mpi_nblock.1.ir</computeroutput> 
+(<xref linkend="apple.mpi.nblock.1.c"/>)
+or
+<computeroutput>apple_mpi_nblock.2.c</computeroutput>
+(<xref linkend="apple.mpi.nblock.2.c"/>).
+</para>
+ 
+<para>In the next section we will switch from static assignment to a
+dynamic scheme.</para>
+
+</chapter>

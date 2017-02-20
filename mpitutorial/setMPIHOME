@@ -1,0 +1,12 @@
+#MPIHOME=/usr/local/mpich-1.2.6-IA32-ch_shmem
+#MPIHOME=/usr/local/mpich-1.2.6-IA32-ch_p4
+#MPIHOME=/usr/local/mpich-1.2.5-sparc-v7-solaris7-gcc-3.3.1
+MPIHOME=/usr/local/mpich-1.2.5.2-sparc-v7-solaris7-gcc-3.3.1-ch_p4mpd
+export MPIHOME
+
+LD_LIBRARY_PATH=$MPIHOME/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH
+
+PATH=$MPIHOME/bin:$PATH
+export PATH
+

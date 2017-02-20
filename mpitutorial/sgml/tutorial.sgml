@@ -1,0 +1,31 @@
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook XML V4.2//EN"
+"docbook/dtd/4.2/docbook.dtd"
+[ 
+<!ENTITY preface SYSTEM "preface.sgml">
+<!ENTITY chap_serial SYSTEM "chap_serial.sgml">
+<!ENTITY chap_firstparallel SYSTEM "chap_firstparallel.sgml">
+<!ENTITY chap_nonblocking SYSTEM "chap_nonblocking.sgml">
+<!ENTITY chap_dynamicload SYSTEM "chap_dynamicload.sgml">
+<!ENTITY chap_omp SYSTEM "chap_omp.sgml">
+<!ENTITY code SYSTEM "code.sgml">
+]
+>
+
+<book>
+  <bookinfo>
+    <title>Yet Another MPI Tutorial</title>
+    <author><firstname>Georg</firstname><surname>Bisseling</surname></author>
+    <copyright><year>2005,2006,2007</year><holder>Georg Bissling</holder></copyright>
+  </bookinfo>
+
+  &preface;
+  &chap_serial;
+  &chap_firstparallel;
+  &chap_nonblocking;
+  &chap_dynamicload;
+  &chap_omp;
+
+  
+  
+  &code;
+ </book>

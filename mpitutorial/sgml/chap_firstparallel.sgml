@@ -1,0 +1,153 @@
+<chapter><title>A working parallel program</title>
+
+<para>Now we want to gather the results of the computation in one place and
+eventually write them out to a file. My first try to do that looked like
+<computeroutput>apple_mpi.1.c</computeroutput> (<xref
+linkend="apple.mpi.1.c"/>).</para>
+
+<para>The root process sets up an MPI_Irecv for each row and uses the TAG
+to let each row result fall into place. This will work as long as the upper
+bound for TAG values will be bigger than the number of rows.</para>
+
+<para>All ranks send the calculated rows back to the root, even root
+itself. I assume that each serious MPI implementation will recognize this
+particular case and will reduce the MPI_Send to a memcpy. This makes the
+code very symmetric on all ranks.</para>
+
+<para>Now what do we get when we run that with two CPUs?</para>
+
+<screen>
+> time mpiexec -np 1 ./apple_mpi.1
+...
+real    0m5.161s
+user    0m0.120s
+sys     0m0.012s
+</screen>
+
+<para>That's ok. How about 2 processes?</para>
+
+<screen>
+> time mpiexec -np 2 ./apple_mpi.1
+...
+real    0m4.887s
+user    0m0.104s
+sys     0m0.024s
+</screen>
+
+<para>Now that is a real mess! We invested all this effort and on two CPUs
+we get a performance that is equal to the serial program using
+only one CPU.  Ok, lets forget about this MPI thing and buy a faster single
+CPU machine then...</para>
+
+<para>Well, this kind of disappointment will stay with us. We just have to
+find out what happened. We used the MPI_Irecv to give the MPI a chance to
+receive the messages behind the scenes while we are doing computational
+work. Good idea. But apparently it didn't work. </para>
+
+<para>You can do performance analysis the hard way using print statements in
+your code - if you can afford this waste of time. I suggest to start with a
+evaluation copy of the Intel Trace Analyzer and Collector (ITAC) to do
+performance analysis and correctness checking of your MPI programs.</para>
+
+<para>If ITAC is properly installed and the binary is linked against shared
+MPI libraries then getting performance data for our program can be as simple 
+as this:</para>
+
+<screen>
+> LD_PRELOAD=libVT.so time mpiexec -np 2 ./apple_mpi.1
+...
+[0] Intel(R) Trace Collector INFO: Writing tracefile apple_mpi.1.stf in /home/georg/src/mpi-main-trunk/mpi/mpitutorial
+0.11user 0.02system 0:05.66elapsed 2%CPU (0avgtext+0avgdata 0maxresident)k
+0inputs+0outputs (0major+2526minor)pagefaults 0swaps
+</screen>
+
+<para>ITAC (<xref linkend="FIG.ITAC.APPLE.MPI.1.P2.FULLSPAN"/>) shows that the
+first process P0 goes straight into the calculation while P1 calculates some
+rows, sends them back and get's stuck. Only after P0 finished it's
+calculations P1 can complete it's task. The diagram to the right shows that
+both processes sent 512 rows back to P0, as expected.</para>
+
+    <figure id="FIG.ITAC.APPLE.MPI.1.P2.FULLSPAN">
+    <title>The whole mess.</title>
+        <mediaobject> <imageobject>
+        <imagedata align="center" 
+                   fileref="../graphics/itac_apple_mpi_1_p2_fullspan.png" 
+                   format="PNG" scale="66"/>
+    </imageobject></mediaobject></figure>
+
+<para>Zooming into the first second shows that P1 is able to send 16 rows back
+before the 17th MPI_Send blocks (<xref
+linkend="FIG.ITAC.APPLE.MPI.1.P2.1S"/>).</para>
+
+    <figure id="FIG.ITAC.APPLE.MPI.1.P2.1S">
+    <title>The first second of the mess.</title>
+        <mediaobject> <imageobject>
+        <imagedata align="center" 
+                   fileref="../graphics/itac_apple_mpi_1_p2_1s.png" 
+                   format="PNG" scale="66"/>
+    </imageobject></mediaobject></figure>
+
+<para>If you refer to the MPI standard you see that the MPI
+implementation is well within the specs. So we have to change our
+tactics. We will now for the first time use the
+<computeroutput>IDLEROOT</computeroutput> feature. Note that we use
+three processors, one for the idle root and two to actually calculate:
+</para>
+
+<screen>
+>time mpiexec -np 3 ./apple_mpi.1.ir
+...
+real    0m2.839s
+user    0m0.100s
+sys     0m0.016s
+</screen>
+
+<para>That looks reasonable. But we waste a whole processor for the idle root
+process. It can be a very good thing to reserve an extra processor for
+bookkeeping tasks or for doing things that have to be serialized (I/O 
+libraries for example tend to lack parallelism).</para>
+
+<para>What if we would interrupt the calculation of P0 after each
+row to poll for the messages coming in from the other processes?
+The program <computeroutput>apple_mpi_poll.1.c</computeroutput> 
+(<xref linkend="apple.mpi.poll.1.c"/>) tries to do that:
+</para>
+
+<screen>
+> time mpiexec -np 2 ./apple_mpi_poll.1
+...
+real    0m2.846s
+user    0m0.108s
+sys     0m0.020s
+</screen>
+
+<para>That look's ok. How about using all four processors?</para>
+
+<screen>
+> time mpiexec -np 4 ./apple_mpi_poll.1
+...
+real    0m2.525s
+user    0m0.092s
+sys     0m0.020s
+</screen>
+
+<para>Ouch! What happens here? Again we use ITAC for analysis 
+(<xref linkend="FIG.ITAC.APPLE.MPI.POLL.1.P4.FULLSPAN"/>) 
+and see that the polling does not really allow P1 and P2 to 
+make progress.</para>
+
+    <figure id="FIG.ITAC.APPLE.MPI.POLL.1.P4.FULLSPAN">
+    <title>Polling does not help.</title>
+        <mediaobject> <imageobject>
+        <imagedata align="center" 
+                   fileref="../graphics/itac_apple_mpi_poll_1_p4_fullspan.png" 
+                   format="PNG" scale="66"/>
+    </imageobject></mediaobject></figure>
+
+
+<para>We see that this program does not behave much better than
+apple_mpi.1.c. For some reason the polling does not work as we expect.
+In the next chapter we'll try to do better by using
+MPI's non-blocking point to point communication.</para>
+
+</chapter>
