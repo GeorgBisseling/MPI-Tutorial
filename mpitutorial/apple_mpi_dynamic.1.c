@@ -20,6 +20,7 @@ int main (int argc, char **argv)
   int 		col, iter, keep_going = 1, nprocs, myrank, rank;
   int 		*result = 0;
   int 		*lcount = 0; /* lcount[p] == #rows processor p did */
+
   double 	re, im;
 
   MPI_Init (&argc, &argv);
@@ -44,11 +45,11 @@ int main (int argc, char **argv)
   if (0 == myrank) {
       /* master */
       int i;
-      int first_run = 1;
       int numbusy = 0, nextline = YPIX - 1;
       int *busy = 0; /* busy[p] != 0 means processor p is busy */
       MPI_Request *rreq = 0;
-
+      int *completed_req_indices = 0; /* used in MPI_Waitsome */
+      
       lcount = (int *) malloc (nprocs * sizeof (*lcount));
       memset (lcount, 0, nprocs * sizeof (*lcount));
 
@@ -62,11 +63,13 @@ int main (int argc, char **argv)
       /* you can not do that standard compliant with memset() */
       for (i = 0; i < nprocs; i++) rreq[i] = MPI_REQUEST_NULL;
 
+      completed_req_indices = (int*)calloc(nprocs, sizeof(int));
+      
       /* loop while there is work to do or some ranks are still working */
       while (nextline >= 0 || numbusy > 0) {
 	  /* send out work */
-	  if (nextline >= 0 && numbusy < nprocs - 1) {
-	      for (rank = 1; rank < nprocs; rank++)
+	  while (nextline >= 0 && numbusy < nprocs - 1) {
+	      for (rank = nprocs-1; rank > 0; rank--)
 		  if (0 == busy[rank]) {
 		      busy[rank] = 1;
 		      /* slave listens, so blocking send is ok */
@@ -77,21 +80,21 @@ int main (int argc, char **argv)
 				rreq + rank);
 		      nextline--;
 		      numbusy++;
-		      /* make all busy in the first run, 
-			 otherwise only one per loop */
-		      if (!first_run)
-			  break;
+		      break;
 		  }
 	  }
-	  first_run = 0;
 	  /* try to receive something */
 	  if (numbusy > 0) {
 	      int who;
-	      MPI_Waitany (nprocs, rreq, &who, MPI_STATUS_IGNORE);
-	      if (MPI_UNDEFINED != who) {
-		  busy[who] = 0;
-		  lcount[who]++;
-		  numbusy--;
+	      int outcount=0;
+	      MPI_Waitsome(nprocs, rreq, &outcount, completed_req_indices,
+			   MPI_STATUSES_IGNORE);
+	      if (MPI_UNDEFINED != outcount)
+	      for(int i=0; i<outcount; i++) {
+		who = completed_req_indices[i];
+		busy[who] = 0;
+		lcount[who]++;
+		numbusy--;
 	      }
 	  }
       }
@@ -124,9 +127,11 @@ int main (int argc, char **argv)
       }
   }
 
+  char **names = getProcessorNames(MPI_COMM_WORLD);
   if (0 == myrank) {
-      for(int r=0; r<nprocs; r++)
-	  fprintf(stdout, "%4d: calculated %5d lines\n", r, lcount[r]);
+    int r;
+    for(r=0; r<nprocs; r++)
+      fprintf(stdout, "%4d on %-10s computed %5d lines (%6.2f%%)\n", r, names[r], lcount[r], lcount[r] * 100.0 / YPIX);
   }
 
   fflush(stdout);

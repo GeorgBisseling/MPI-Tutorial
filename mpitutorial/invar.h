@@ -1,6 +1,8 @@
 #ifndef _INVAR_H_
 #define _INVAR_H_
 
+#include <mpi.h>
+
 /* Please see invar.c for a comment. */
 
 void usage (int argc, char **argv);
@@ -8,6 +10,7 @@ int initRanges (int argc, char **argv);
 void distributeRanges (void);
 int iterate (double re, double im, int maxiter);
 void writeOut (char *progname, int nprocs, int *result);
+char** getProcessorNames(MPI_Comm comm);
 
 #ifndef INVAR_EXTERN
 #define INVAR_EXTERN extern

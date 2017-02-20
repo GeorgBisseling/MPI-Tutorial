@@ -146,3 +146,42 @@ writeOut (char *progname, int nprocs, int *result)
       }
   fclose (fp);
 }
+
+char** getProcessorNames(MPI_Comm comm)
+{
+  int rank, myrank, nprocs;
+  MPI_Comm_size (comm, &nprocs);
+  MPI_Comm_rank (comm, &myrank);
+
+  char name[MPI_MAX_PROCESSOR_NAME];
+  int len = 0;
+  MPI_Get_processor_name (name, &len);
+
+  if (len>=MPI_MAX_PROCESSOR_NAME) {
+    printf("ooops");
+    abort();
+  }
+
+  name[len] = 0;
+
+  fflush(stdout);
+  
+  if (myrank == 0) {
+    char *recv_buff = (char *)calloc(nprocs, MPI_MAX_PROCESSOR_NAME);
+    MPI_Gather(name, MPI_MAX_PROCESSOR_NAME, MPI_CHAR,
+	       recv_buff, MPI_MAX_PROCESSOR_NAME, MPI_CHAR,
+	       0, comm);
+    char** names = (char**) calloc(nprocs, sizeof(char*));
+    for(rank=0; rank<nprocs; rank++) {
+      names[rank] = (char*)malloc(MPI_MAX_PROCESSOR_NAME);
+      strncpy(names[rank], recv_buff + rank*MPI_MAX_PROCESSOR_NAME, MPI_MAX_PROCESSOR_NAME);
+    }
+    free(recv_buff);
+    return names;
+  } else {
+    MPI_Gather(name, MPI_MAX_PROCESSOR_NAME, MPI_CHAR,
+	       NULL, 0, MPI_CHAR,
+	       0, comm);
+    return NULL;
+  }
+}
